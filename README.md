@@ -16,6 +16,14 @@
   and is only allowed to change when a benchmark proves the change is better.</b>
 </p>
 
+<p align="center">
+  <a href="assets/self-evolving-harness.mp4">
+    <img src="assets/self-evolving-harness.gif" alt="Self-evolution cycle demo" width="100%"/>
+  </a>
+  <br/>
+  <sub>▶ <b>57-second walkthrough</b>: live traffic → diagnose → improve → decide → gates. Click for the full-quality MP4.</sub>
+</p>
+
 ---
 
 ## Contents
