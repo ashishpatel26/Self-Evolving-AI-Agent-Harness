@@ -342,7 +342,9 @@ assets/              banner + run snapshots
 
 ## Roadmap
 
-- [ ] Benchmark with held-out **brand-alias** questions that v1 fails (Disney, Chase, Coke), so a correct fix can pass the quality gate
+- [x] Benchmark with held-out **brand-alias** questions that v1 fails (Disney, Gmail maker): v1 now scores 78%, so a correct fix *can* pass the quality gate
+- [ ] Steer the Improver away from "web_search first" proposals (they score 22–33%) toward "use the stock ticker on the first call"
+- [ ] Guard against wrong-entity prefix matches (`Chase` → an unrelated registrant): verify the resolved company in the critic
 - [ ] Repeat each benchmark question N times; gate on mean ± variance to absorb LLM nondeterminism
 - [ ] Lock file / run ID per data directory to make concurrent runs safe
 - [ ] Persist traces to SQLite or Postgres; export spans via OpenTelemetry
