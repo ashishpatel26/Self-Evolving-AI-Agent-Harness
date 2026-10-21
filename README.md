@@ -37,6 +37,7 @@
 - [Quick start](#quick-start)
 - [Configuration](#configuration)
 - [Results: a real run](#results-a-real-run)
+- [Benchmark](#benchmark)
 - [What we learned](#what-we-learned)
 - [Project layout](#project-layout)
 - [Roadmap](#roadmap)
@@ -266,7 +267,7 @@ uv run self-evolving-ai-agent-harness rollback    # reactivate previous policy v
 uv run python -m self_evolving_ai_agent_harness.mcp_server
 ```
 
-A full cycle takes about 5 minutes on a laptop GPU: 5 traffic tasks, 7 benchmark questions × up to 3 policies, and 4 agent calls.
+A full cycle takes about 10–12 minutes on a laptop GPU: 5 traffic tasks × 2, 9 benchmark questions × up to 3 policies, and 4 agent calls.
 
 ---
 
@@ -299,7 +300,7 @@ All settings are environment variables (see `config.py`):
 <p align="center"><img src="assets/self-evolve-3.jpg" alt="Post-evolution traffic" width="100%"/></p>
 <p align="center"><sub><b>3.</b> No candidate passed, so <b>v1 stays active</b>. The harness refused to ship a change that would have made production worse.</sub></p>
 
-### Scorecard from this run
+### Scorecard from this run (benchmark v1)
 
 | | v1 (active) | Candidate C | Candidate B |
 |---|:---:|:---:|:---:|
@@ -310,13 +311,73 @@ All settings are environment variables (see `config.py`):
 
 ---
 
+## Benchmark
+
+The benchmark is the harness's **judge**. Its questions are **disjoint from live traffic**, and each one
+is graded by the critic on the agent's **first** tool call (right tool + usable data).
+
+### Question set (`evaluation.py`)
+
+| # | Question | Expected tool | Why it is here |
+|:-:|---|---|---|
+| 1 | What profit did Snapchat make? | `financial_api` | Brand ≠ registrant (Snap Inc), but v1 handles it |
+| 2 | How much revenue does Coca-Cola bring in? | `financial_api` | Punctuation in name (`COCA COLA CO`) |
+| 3 | What is YouTube's parent company's net income? | `financial_api` | Indirect reference to Alphabet |
+| 4 | What are Amazon's total assets? | `financial_api` | Balance-sheet metric (point-in-time) |
+| 5 | What is Microsoft's earnings per share? | `financial_api` | Metric synonym (EPS) |
+| 6 | How much revenue did Disney make? 🆕 | `financial_api` | **Held-out alias v1 fails** (`WALT DISNEY CO`, ticker `DIS`) |
+| 7 | What are Gmail maker's total assets? 🆕 | `financial_api` | **Held-out alias v1 fails** (product → Alphabet) |
+| 8 | Who founded Netflix? | `web_search` | Guards against "always use financial_api" |
+| 9 | What is Nvidia known for? | `web_search` | Guards against "always use financial_api" |
+
+> [!IMPORTANT]
+> **Why questions 6–7 were added.** In the first benchmark (1–5, 8–9) v1 already scored **100%**, so the
+> quality gate (*candidate must score strictly higher*) could **never** pass. A benchmark has to contain
+> unseen examples of the failure class being fixed, otherwise the loop rejects everything forever.
+
+### Latest run (benchmark v2, 9 questions)
+
+| # | Question | v1 | Candidate C | Candidate A |
+|:-:|---|:-:|:-:|:-:|
+| 1 | Snapchat profit | ✅ | ❌ | ❌ |
+| 2 | Coca-Cola revenue | ✅ | ❌ | ❌ |
+| 3 | YouTube parent net income | ✅ | ❌ | ❌ |
+| 4 | Amazon total assets | ✅ | ❌ | ❌ |
+| 5 | Microsoft EPS | ✅ | ✅ | ❌ |
+| 6 | Disney revenue 🆕 | ❌ | ❌ | ❌ |
+| 7 | Gmail maker total assets 🆕 | ❌ | ❌ | ❌ |
+| 8 | Who founded Netflix | ✅ | ✅ | ✅ |
+| 9 | What Nvidia is known for | ✅ | ✅ | ✅ |
+| | **Score** | **78%** | 33% | 22% |
+| | Quality gate | — | ❌ | ❌ |
+| | Regression gate | — | ❌ broke 4 | ❌ broke 5 |
+| | **Decision** | **kept** | rejected | rejected |
+
+<sub>Candidate C: <i>"Use web_search to map popular company aliases to their correct SEC registrant names or stock symbols prior to calling the financial_api tool."</i><br/>
+Candidate A: <i>"If the user asks about a company by its common name, first use web_search to find its official SEC registrant name or ticker symbol before using financial_api."</i></sub>
+
+### Benchmark history
+
+| Benchmark | Questions | v1 score | Best candidate | Can a fix pass the quality gate? |
+|---|:-:|:-:|:-:|:-:|
+| v1 (initial) | 7 | 100% | 86% | ❌ impossible: nothing beats 100% |
+| **v2 (+ held-out aliases)** | **9** | **78%** | 33% | ✅ yes: headroom of 2 questions |
+
+**Reading the result.** The benchmark now has room for improvement, but every proposal so far adds a
+*"web_search first"* detour, which derails the 4B executor on questions it already got right. The gates
+rejected all of them, which is the intended behaviour. The next step is steering the Improver toward
+the fix the traces point at: **pass the stock ticker on the first call** (the agent already knows
+`GOOGL` and `META` from its own retries).
+
+---
+
 ## What we learned
 
 Running against real models and real APIs taught more than the original scripted demo:
 
 1. **Real models don't fail where you plant failures.** A deliberately weak v1 policy (*"always use web_search"*) was simply ignored by qwen3.5, which routed correctly from the tool descriptions alone. Evolution has to target the model's **genuine** weaknesses, found in traces.
 2. **Retries show what the agent already knows.** The agent fixed `Google → Alphabet` by itself on the second call. Showing the Diagnoser the **full trajectory** (not just the failure) turned a vague diagnosis into a precise one.
-3. **A gate is only as good as its benchmark.** In this run v1 scored 100% on a benchmark without unseen alias cases, so no candidate *could* pass the quality gate. The benchmark needs held-out examples of every failure class being fixed.
+3. **A gate is only as good as its benchmark.** On the first benchmark v1 scored 100%, so no candidate *could* pass the quality gate. Adding held-out alias cases (Disney, Gmail maker) dropped v1 to 78% and gave a real fix room to win. See [Benchmark](#benchmark).
 4. **Small models need structure.** Free-text JSON from a 4B model sometimes failed to parse. CrewAI `output_pydantic` made proposals reliable.
 5. **Isolate experiments.** Two runs sharing one trace file inflated failure clusters. Use `HARNESS_DATA_DIR` per run.
 6. **Fix tools in code, not in prompts.** Strict name matching and XBRL tag drift were tool bugs. They were fixed in the MCP server, leaving only genuine agent behaviour for evolution to improve.
