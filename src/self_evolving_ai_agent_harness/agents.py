@@ -1,9 +1,9 @@
 """The four CrewAI agents.
 
-    Executor  (worker model)   answers user tasks with MCP tools, guided by the policy
-    Diagnoser (worker model)   finds the root cause of clustered failures
-    Improver  (worker model)   drafts candidate tool usage instructions
-    Decider   (decision model) picks the most promising candidate
+    Executor  (policy's worker model) answers user tasks with MCP tools, guided by the policy
+    Diagnoser (worker model)          finds the root cause of clustered failures
+    Improver  (worker model)          drafts candidate tool usage instructions
+    Decider   (decision model)        picks the most promising candidate
 """
 
 import re
@@ -58,16 +58,20 @@ def run_executor(query: str, policy: AgentPolicy) -> tuple[list[dict], str]:
         goal="Answer the user's question by calling exactly one tool.",
         backstory="You follow the company's tool usage policy.",
         mcps=[TOOLS_SERVER],
-        llm=ollama_llm(WORKER_MODEL),
+        llm=ollama_llm(policy.worker_model),
         max_iter=3,
         verbose=False,
+    )
+    examples = (
+        "\nEXAMPLES OF CORRECT FIRST CALLS:\n" + "\n".join(f"- {e}" for e in policy.examples) + "\n"
+        if policy.examples else ""
     )
     TOOL_CALLS.clear()
     answer = kickoff(
         executor,
         # Policy sits in the task text: a 4B model weighs it far more than the backstory.
         description=(
-            f"TOOL USAGE POLICY: {policy.routing_instruction}\n\n"
+            f"TOOL USAGE POLICY: {policy.routing_instruction}\n{examples}\n"
             f"User question: {query}\n"
             "Call the right tool with the right arguments, then answer using its output."
         ),
@@ -110,18 +114,34 @@ class Proposals(BaseModel):
     instructions: list[str]
 
 
-def propose_improvements(diagnosis: str, policy: AgentPolicy) -> list[str]:
-    """Return candidate routing instructions (may be empty if the model's output is unusable)."""
+def propose_improvements(
+    diagnosis: str, policy: AgentPolicy, recoveries: list[str], rejected: list[dict]
+) -> list[str]:
+    """Return candidate routing instructions (may be empty if the model's output is unusable).
+
+    recoveries: "first call X failed, later call Y worked" lines from traces (what the agent already knows).
+    rejected:   earlier proposals that failed the gates, with scores, so the Improver stops repeating them.
+    """
     improver = Agent(
         role="Agent Improvement Engineer",
         goal="Rewrite the agent's tool usage instruction so the diagnosed failures stop.",
-        backstory="You tune self-improving agents. A benchmark gate judges your proposals; you cannot deploy.",
+        backstory=(
+            "You tune self-improving agents running on small local models. A benchmark gate judges your "
+            "proposals; you cannot deploy. Experience: fixing the ARGUMENTS of the first tool call works "
+            "better than adding extra tool-call steps, which small models often get wrong."
+        ),
         llm=ollama_llm(WORKER_MODEL),
         verbose=False,
     )
+    evidence = "\n".join(f"- {r}" for r in recoveries) or "- none"
+    history = "\n".join(
+        f"- {r['change']}  -> scored {r['score']:.0%}, broke {r['broke']} questions" for r in rejected
+    ) or "- none"
     task = Task(
         description=(
             f"Diagnosis:\n{diagnosis}\n\n"
+            f"Evidence: the agent recovered by itself on a retry, so it already knows these answers:\n{evidence}\n\n"
+            f"Previously REJECTED proposals (do not repeat these ideas):\n{history}\n\n"
             f"Current instruction:\n{policy.routing_instruction}\n\n"
             "Write 3 alternative tool usage instructions (1-3 sentences each) for an agent with the tools "
             "financial_api(company, metric) and web_search(query). They must generalize to unseen companies "
@@ -155,7 +175,7 @@ def decide(pattern: str, current: str, options: list[str]) -> int:
     reply = kickoff(
         decider,
         description=(
-            "TASK: Choose the tool usage instruction most likely to fix the failure pattern "
+            "TASK: Choose the policy change most likely to fix the failure pattern "
             "without breaking questions that currently work.\n"
             f"STATE:\nfailure_pattern: {pattern}\ncurrent_instruction: {current}\n"
             f"OPTIONS:\n{listing}"

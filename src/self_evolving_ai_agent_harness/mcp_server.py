@@ -53,9 +53,13 @@ def _company_facts(cik: int) -> dict:
     return _get_json(f"https://data.sec.gov/api/xbrl/companyfacts/CIK{cik:010d}.json")["facts"].get("us-gaap", {})
 
 
+LEGAL_WORDS = {"the", "inc", "incorporated", "corp", "corporation", "co", "company", "ltd", "plc", "llc"}
+
+
 def _key(text: str) -> str:
-    """'Coca-Cola Co.' and 'COCA COLA CO' -> 'cocacolaco'."""
-    return re.sub(r"[^a-z0-9]", "", text.lower())
+    """'The Coca-Cola Company' and 'COCA COLA CO' -> 'cocacola' (legal words, punctuation, case ignored)."""
+    words = re.findall(r"[a-z0-9]+", text.lower().replace("-", " ").replace("&", " "))
+    return "".join(w for w in words if w not in LEGAL_WORDS)
 
 
 def _find_company(company: str) -> dict | None:
