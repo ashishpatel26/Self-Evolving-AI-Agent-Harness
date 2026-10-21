@@ -1,0 +1,19 @@
+[project]
+name = "self-evolving-ai-agent-harness"
+version = "0.1.0"
+description = "Self-evolving agent harness: CrewAI agents on local Ollama models, MCP tools, benchmark-gated policy evolution"
+readme = "README.md"
+authors = [
+    { name = "ashishpatel26", email = "shriganesh.patel@gmail.com" }
+]
+requires-python = ">=3.14"
+dependencies = [
+    "crewai[litellm]>=1.15.28",
+]
+
+[project.scripts]
+self-evolving-ai-agent-harness = "self_evolving_ai_agent_harness:main"
+
+[build-system]
+requires = ["uv_build>=0.13.1,<0.14.0"]
+build-backend = "uv_build"

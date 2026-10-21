@@ -1,0 +1,84 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="420" viewBox="0 0 1280 420" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0b1020"/>
+      <stop offset="0.55" stop-color="#121a3a"/>
+      <stop offset="1" stop-color="#1d0f33"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#38bdf8"/>
+      <stop offset="0.5" stop-color="#a78bfa"/>
+      <stop offset="1" stop-color="#f472b6"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#a78bfa" stop-opacity="0.45"/>
+      <stop offset="1" stop-color="#a78bfa" stop-opacity="0"/>
+    </radialGradient>
+    <pattern id="grid" width="32" height="32" patternUnits="userSpaceOnUse">
+      <path d="M32 0H0V32" fill="none" stroke="#ffffff" stroke-opacity="0.04"/>
+    </pattern>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0 0L10 5L0 10z" fill="#c4b5fd"/>
+    </marker>
+  </defs>
+
+  <rect width="1280" height="420" fill="url(#bg)"/>
+  <rect width="1280" height="420" fill="url(#grid)"/>
+  <circle cx="1010" cy="210" r="230" fill="url(#glow)"/>
+
+  <!-- Title block -->
+  <text x="64" y="92" fill="#94a3b8" font-size="18" letter-spacing="5">CREWAI · OLLAMA · MCP</text>
+  <text x="64" y="160" fill="#f8fafc" font-size="56" font-weight="700">Self-Evolving</text>
+  <text x="64" y="222" fill="url(#accent)" font-size="56" font-weight="700">AI Agent Harness</text>
+  <text x="64" y="268" fill="#cbd5e1" font-size="20">Agents that learn from their own failures,</text>
+  <text x="64" y="296" fill="#cbd5e1" font-size="20">gated by benchmarks before anything ships.</text>
+
+  <!-- Chips -->
+  <g font-size="15" font-weight="600">
+    <rect x="64" y="330" width="196" height="38" rx="19" fill="#0ea5e9" fill-opacity="0.15" stroke="#38bdf8"/>
+    <text x="162" y="354" fill="#7dd3fc" text-anchor="middle">Worker · qwen3.5 4B</text>
+    <rect x="272" y="330" width="176" height="38" rx="19" fill="#8b5cf6" fill-opacity="0.15" stroke="#a78bfa"/>
+    <text x="360" y="354" fill="#c4b5fd" text-anchor="middle">Decider · tev1</text>
+    <rect x="460" y="330" width="206" height="38" rx="19" fill="#ec4899" fill-opacity="0.15" stroke="#f472b6"/>
+    <text x="563" y="354" fill="#f9a8d4" text-anchor="middle">Tools · SEC + Wikipedia</text>
+  </g>
+
+  <!-- Evolution loop -->
+  <circle cx="1010" cy="210" r="132" fill="none" stroke="url(#accent)" stroke-width="2.5" stroke-dasharray="6 8"/>
+  <g font-size="14" font-weight="600" text-anchor="middle">
+    <g>
+      <rect x="950" y="52" width="120" height="40" rx="10" fill="#0f172a" stroke="#38bdf8"/>
+      <text x="1010" y="77" fill="#e0f2fe">Execute</text>
+    </g>
+    <g>
+      <rect x="1080" y="122" width="120" height="40" rx="10" fill="#0f172a" stroke="#60a5fa"/>
+      <text x="1140" y="147" fill="#dbeafe">Trace</text>
+    </g>
+    <g>
+      <rect x="1080" y="258" width="120" height="40" rx="10" fill="#0f172a" stroke="#a78bfa"/>
+      <text x="1140" y="283" fill="#ede9fe">Diagnose</text>
+    </g>
+    <g>
+      <rect x="950" y="328" width="120" height="40" rx="10" fill="#0f172a" stroke="#c084fc"/>
+      <text x="1010" y="353" fill="#f3e8ff">Improve</text>
+    </g>
+    <g>
+      <rect x="820" y="258" width="120" height="40" rx="10" fill="#0f172a" stroke="#f472b6"/>
+      <text x="880" y="283" fill="#fce7f3">Decide</text>
+    </g>
+    <g>
+      <rect x="820" y="122" width="120" height="40" rx="10" fill="#0f172a" stroke="#fb7185"/>
+      <text x="880" y="147" fill="#ffe4e6">Gate</text>
+    </g>
+  </g>
+  <g stroke="#c4b5fd" stroke-width="2" fill="none" marker-end="url(#arrow)">
+    <path d="M1070 82 Q1110 92 1125 118"/>
+    <path d="M1150 166 L1150 252"/>
+    <path d="M1125 302 Q1110 328 1074 340"/>
+    <path d="M946 340 Q910 328 895 304"/>
+    <path d="M870 254 L870 168"/>
+    <path d="M895 118 Q910 92 946 82"/>
+  </g>
+  <text x="1010" y="204" fill="#f8fafc" font-size="22" font-weight="700" text-anchor="middle">v1 → v2</text>
+  <text x="1010" y="230" fill="#94a3b8" font-size="13" text-anchor="middle">only if both gates pass</text>
+</svg>
